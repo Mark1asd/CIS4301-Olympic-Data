@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -9,46 +9,26 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-const mockData = {
-  gold: [
-    { year: '2000', medals: 50 },
-    { year: '2004', medals: 70 },
-    { year: '2008', medals: 80 },
-    { year: '2012', medals: 90 },
-    { year: '2016', medals: 100 },
-    { year: '2020', medals: 120 },
-  ],
-  silver: [
-    { year: '2000', medals: 40 },
-    { year: '2004', medals: 60 },
-    { year: '2008', medals: 70 },
-    { year: '2012', medals: 80 },
-    { year: '2016', medals: 90 },
-    { year: '2020', medals: 100 },
-  ],
-  bronze: [
-    { year: '2000', medals: 30 },
-    { year: '2004', medals: 50 },
-    { year: '2008', medals: 60 },
-    { year: '2012', medals: 70 },
-    { year: '2016', medals: 80 },
-    { year: '2020', medals: 90 },
-  ],
-  total: [
-    { year: '2000', medals: 120 },
-    { year: '2004', medals: 180 },
-    { year: '2008', medals: 210 },
-    { year: '2012', medals: 240 },
-    { year: '2016', medals: 270 },
-    { year: '2020', medals: 310 },
-  ],
-};
-
 function Graph() {
   const [selectedType, setSelectedType] = useState('total'); // Default to 'total'
+  const [data, setData] = useState({}); // State for backend data
+
+  // Fetch data from the backend
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const response = await fetch('YOUR_BACKEND_API_ENDPOINT'); // Replace with your API endpoint
+        const result = await response.json();
+        setData(result); // Assume the backend returns an object with medal types as keys
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+    fetchData();
+  }, []);
 
   return (
-    <div>
+    <div style={{ color: 'white' }}>
       {/* Buttons for Medal Type */}
       <div style={{ marginBottom: '20px' }}>
         {['gold', 'silver', 'bronze', 'total'].map((type) => (
@@ -59,9 +39,9 @@ function Graph() {
               margin: '5px',
               padding: '10px 15px',
               cursor: 'pointer',
-              backgroundColor: selectedType === type ? '#007BFF' : '#f0f0f0',
-              color: selectedType === type ? '#fff' : '#000',
-              border: '1px solid #ccc',
+              backgroundColor: selectedType === type ? '#444' : '#666',
+              color: 'white',
+              border: '1px solid white',
               borderRadius: '5px',
             }}
           >
@@ -71,21 +51,35 @@ function Graph() {
       </div>
 
       {/* Graph */}
-      <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={mockData[selectedType]}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="year" />
-          <YAxis />
-          <Tooltip />
-          <Line
-            type="monotone"
-            dataKey="medals"
-            stroke="#007BFF"
-            strokeWidth={2}
-            dot={{ r: 5 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      {data[selectedType] && data[selectedType].length > 0 ? (
+        <ResponsiveContainer width="100%" height={400}>
+          <LineChart data={data[selectedType]}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+            <XAxis dataKey="year" stroke="white" />
+            <YAxis stroke="white" />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#444',
+                border: '1px solid white',
+                color: 'white',
+              }}
+              itemStyle={{ color: 'white' }}
+              labelStyle={{ color: 'white' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="medals"
+              stroke="white"
+              strokeWidth={2}
+              dot={{ r: 5, fill: 'white' }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      ) : (
+        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+          No data available for {selectedType} medals.
+        </div>
+      )}
     </div>
   );
 }

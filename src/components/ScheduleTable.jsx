@@ -1,26 +1,27 @@
-import React, { useState } from 'react';
-
-// Mock data for the table
-const mockData = [
-  { discipline: 'Athletics', '-2': 'X', '-1': '', '0': 'X', '1': '', '2': 'X', '3': '', '4': '', '5': '', '6': '' },
-  { discipline: 'Swimming', '-2': '', '-1': 'X', '0': 'X', '1': 'X', '2': '', '3': '', '4': 'X', '5': '', '6': '' },
-  { discipline: 'Gymnastics', '-2': '', '-1': '', '0': '', '1': 'X', '2': 'X', '3': 'X', '4': '', '5': '', '6': '' },
-  { discipline: 'Cycling', '-2': '', '-1': '', '0': 'X', '1': 'X', '2': '', '3': '', '4': 'X', '5': 'X', '6': '' },
-  { discipline: 'Rowing', '-2': '', '-1': 'X', '0': 'X', '1': '', '2': 'X', '3': '', '4': '', '5': '', '6': '' },
-  { discipline: 'Basketball', '-2': '', '-1': '', '0': 'X', '1': '', '2': '', '3': '', '4': '', '5': '', '6': 'X' },
-  { discipline: 'Volleyball', '-2': '', '-1': '', '0': '', '1': 'X', '2': '', '3': '', '4': 'X', '5': '', '6': '' },
-  { discipline: 'Boxing', '-2': '', '-1': '', '0': '', '1': 'X', '2': 'X', '3': '', '4': '', '5': '', '6': 'X' },
-  { discipline: 'Wrestling', '-2': 'X', '-1': '', '0': '', '1': '', '2': '', '3': 'X', '4': 'X', '5': '', '6': '' },
-  { discipline: 'Archery', '-2': '', '-1': '', '0': 'X', '1': 'X', '2': 'X', '3': '', '4': '', '5': 'X', '6': '' },
-];
+import React, { useState, useEffect } from 'react';
 
 function ScheduleTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [data, setData] = useState([]); // State for backend data
   const itemsPerPage = 10;
 
+  // Fetch data from the backend
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const response = await fetch('YOUR_BACKEND_API_ENDPOINT'); // Replace with your API endpoint
+        const result = await response.json();
+        setData(result);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+    fetchData();
+  }, []);
+
   // Filter data based on the search term
-  const filteredData = mockData.filter((item) =>
+  const filteredData = data.filter((item) =>
     item.discipline.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -32,7 +33,7 @@ function ScheduleTable() {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
   return (
-    <div style={{ textAlign: 'center', margin: '20px 0', fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ textAlign: 'center', margin: '20px 0', fontFamily: 'Arial, sans-serif', color: 'white' }}>
       {/* Search Bar */}
       <input
         type="text"
@@ -45,6 +46,8 @@ function ScheduleTable() {
           marginBottom: '20px',
           border: '1px solid #ccc',
           borderRadius: '5px',
+          backgroundColor: '#444',
+          color: 'white',
         }}
       />
 
@@ -58,7 +61,7 @@ function ScheduleTable() {
         }}
       >
         <thead>
-          <tr style={{ backgroundColor: '#f2f2f2' }}>
+          <tr style={{ backgroundColor: '#444', color: 'white' }}>
             <th style={{ border: '1px solid #ddd', padding: '8px' }}>Discipline</th>
             {Array.from({ length: 19 }, (_, i) => -2 + i).map((day) => (
               <th key={day} style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>
@@ -68,25 +71,34 @@ function ScheduleTable() {
           </tr>
         </thead>
         <tbody>
-          {paginatedData.map((item, index) => (
-            <tr key={index}>
-              <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>
-                {item.discipline}
-              </td>
-              {Array.from({ length: 19 }, (_, i) => -2 + i).map((day) => (
-                <td
-                  key={day}
-                  style={{
-                    border: '1px solid #ddd',
-                    padding: '8px',
-                    textAlign: 'center',
-                  }}
-                >
-                  {item[day] || ''}
+          {paginatedData.length > 0 ? (
+            paginatedData.map((item, index) => (
+              <tr key={index}>
+                <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center', color: 'white' }}>
+                  {item.discipline}
                 </td>
-              ))}
+                {Array.from({ length: 19 }, (_, i) => -2 + i).map((day) => (
+                  <td
+                    key={day}
+                    style={{
+                      border: '1px solid #ddd',
+                      padding: '8px',
+                      textAlign: 'center',
+                      color: 'white',
+                    }}
+                  >
+                    {item[day] || ''}
+                  </td>
+                ))}
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="20" style={{ padding: '10px', textAlign: 'center', color: 'white' }}>
+                No data available
+              </td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
 
@@ -100,14 +112,14 @@ function ScheduleTable() {
             marginRight: '10px',
             cursor: 'pointer',
             backgroundColor: currentPage === 1 ? '#ccc' : '#007BFF',
-            color: '#fff',
+            color: 'white',
             border: 'none',
             borderRadius: '5px',
           }}
         >
           Previous
         </button>
-        <span style={{ margin: '0 10px' }}>
+        <span style={{ margin: '0 10px', color: 'white' }}>
           Page {currentPage} of {totalPages}
         </span>
         <button
@@ -118,7 +130,7 @@ function ScheduleTable() {
             marginLeft: '10px',
             cursor: 'pointer',
             backgroundColor: currentPage === totalPages ? '#ccc' : '#007BFF',
-            color: '#fff',
+            color: 'white',
             border: 'none',
             borderRadius: '5px',
           }}

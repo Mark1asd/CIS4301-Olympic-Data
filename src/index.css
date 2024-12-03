@@ -1,0 +1,33 @@
+/* Global Styles */
+body {
+    background-color: #282c34; /* Dark background for the whole app */
+    color: white; /* White text globally */
+    margin: 0;
+    font-family: Arial, sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6, p, table, th, td, button {
+    color: white; /* Ensure all text is white */
+  }
+  
+  button {
+    background-color: #444; /* Optional: darker button background */
+    border: none;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #666; /* Button hover effect */
+  }
+  
+  table {
+    width: 100%;
+  }
+  
+  table th, table td {
+    border: 1px solid white; /* White table borders */
+  }
+  
