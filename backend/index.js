@@ -8,6 +8,13 @@ app.use(express.json());
 
 const PORT = 3001;
 
+// Change these as necessary before running
+const dbConfig = {
+    user: '',
+    password: '',
+    connectString: 'oracle.cise.ufl.edu/orcl'
+};
+
 // Fetch dropdown options
 app.get("/api/options", async (req, res) => {
     const { sport_selection } = req.query;
@@ -20,7 +27,7 @@ app.get("/api/options", async (req, res) => {
       if(sport_selection){
         const eventQuery = `
         SELECT DISTINCT event_name
-        FROM SYS.Athlete_Results
+        FROM Athlete_Results
         WHERE sport_name = :sport_selection
         ORDER BY event_name`;
         const eventResults = await connection.execute(eventQuery, [sport_selection]);
@@ -28,9 +35,9 @@ app.get("/api/options", async (req, res) => {
       } else{
         // Fetch distinct values for each dropdown
         const [countryResults, sportResults, eventResults] = await Promise.all([
-            connection.execute("SELECT DISTINCT country_name FROM SYS.Countries ORDER BY country_name"),
-            connection.execute("SELECT DISTINCT sport_name FROM SYS.Athlete_Results ORDER BY sport_name"),
-            connection.execute("SELECT DISTINCT event_name FROM SYS.Athlete_Results ORDER BY event_name"),
+            connection.execute("SELECT DISTINCT country_name FROM Countries ORDER BY country_name"),
+            connection.execute("SELECT DISTINCT sport_name FROM Athlete_Results ORDER BY sport_name"),
+            connection.execute("SELECT DISTINCT event_name FROM Athlete_Results ORDER BY event_name"),
         ]);
 
         countries = countryResults.rows.map(row => row[0]);
@@ -52,13 +59,6 @@ app.get("/api/options", async (req, res) => {
       }
     }
   });
-
-// Alter these as necessary, these were just for my own local instance.
-const dbConfig = {
-    user: 'C##backend_access',
-    password: 'backend_pass',
-    connectString: '127.0.0.1:1521/FREE'
-};
 
 // Test function to make sure you can connect to your local db instance.
 async function testConnection() {
@@ -88,9 +88,9 @@ app.post('/api/search', async (req, res) => {
             ar.sport_name,
             ar.event_name,
             ar.medal
-        FROM SYS.Athlete_Results ar
-        JOIN SYS.Athletes a ON ar.athlete_id = a.athlete_id
-        JOIN SYS.Countries c ON ar.country_noc = c.noc
+        FROM Athlete_Results ar
+        JOIN Athletes a ON ar.athlete_id = a.athlete_id
+        JOIN Countries c ON ar.country_noc = c.noc
         WHERE 1=1
             AND (:country IS NULL OR c.country_name = :country)
             AND (:sport IS NULL OR ar.sport_name = :sport)
@@ -107,7 +107,6 @@ app.post('/api/search', async (req, res) => {
         }
         
         const results = await connection.execute(query, binds);
-        console.log('Query Results:', results.rows);
         res.json(results.rows);
 
     } catch (err) {
@@ -123,6 +122,8 @@ app.post('/api/search', async (req, res) => {
         }
     }
 });
+
+testConnection()
 
 app.listen(PORT, () => {
     console.log(`Backend running on localhost:${PORT}`);
