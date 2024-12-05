@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: ['http://localhost:3000'] }));
 app.use(express.json());
 
 const PORT = 3001;
@@ -15,70 +15,248 @@ const dbConfig = {
     connectString: 'oracle.cise.ufl.edu/orcl'
 };
 
+// Giant list of country codes in our DB and those used by the frontend's map library paired up.
+// NOTE: This list is unfinished. Will continue to update later, reference and compare the country code txts in OlympicDataset.
+const nocmap = {
+    "BAN": "BD",
+    "BEL": "BE",
+    "BUR": "BF",
+    "BUL": "BG",
+    "BRU": "BN",
+    "BOL": "BO",
+    "JPN": "JP",
+    "BDI": "BI",
+    "BEN": "BJ",
+    "BHU": "BT",
+    "JAM": "JM",
+    "BOT": "BW",
+    "BRA": "BR",
+    "BLR": "BY",
+    "BIZ": "BZ",
+    "RWA": "RW",
+    "SRB": "RS",
+    "TLS": "TL",
+    "TKM": "TM",
+    "TJK": "TJ",
+    "ROU": "RO",
+    "GUA": "GT",
+    "GRE": "GR",
+    "GUY": "GY",
+    "GEO": "GE",
+    "GBR": "GB",
+    "GAB": "GA",
+    "GUI": "GN",
+    "GHA": "GH",
+    "OMA": "OM",
+    "TUN": "TN",
+    "JOR": "JO",
+    "CRO": "HR",
+    "HAI": "HT",
+    "HUN": "HU",
+    "HON": "HN",
+    "PUR": "PR",
+    "PLE": "PS",
+    "POR": "PT",
+    "PAR": "PY",
+    "PAN": "PA",
+    "PNG": "PG",
+    "PER": "PE",
+    "PAK": "PK",
+    "PHI": "PH",
+    "POL": "PL",
+    "ZAM": "ZM",
+    "EST": "EE",
+    "EGY": "EG",
+    "RSA": "ZA",
+    "ECU": "EC",
+    "ITA": "IT",
+    "VIE": "VN",
+    "ETH": "ET",
+    "SOM": "SO",
+    "ZIM": "ZW",
+    "ESP": "ES",
+    "ERI": "ER",
+    "MNE": "ME",
+    "MAD": "MG",
+    "MAR": "MA",
+    "UZB": "UZ",
+    "MYA": "MM",
+    "MLI": "ML",
+    "MGL": "MN",
+    "MKD": "MK",
+    "MAW": "MW",
+    "MTN": "MR",
+    "UGA": "UG",
+    "MAS": "MY",
+    "MEX": "MX",
+    "ISR": "IL",
+    "FRA": "FR",
+    "FIN": "FI",
+    "FIJ": "FJ",
+    "NCA": "NI",
+    "NED": "NL",
+    "NOR": "NO",
+    "NAM": "NA",
+    "VAN": "VU",
+    "NIG": "NE",
+    "NGR": "NG",
+    "NZL": "NZ",
+    "NEP": "NP",
+    "KOS": "XK",
+    "SUI": "CH",
+    "COL": "CO",
+    "CMR": "CM",
+    "CHI": "CL",
+    "CAN": "CA",
+    "CGO": "CG",
+    "CYP": "CY",
+    "CRC": "CR",
+    "CUB": "CU",
+    "SWZ": "SZ",
+    "SYR": "SY",
+    "KGZ": "KG",
+    "KEN": "KE",
+    "SUR": "SR",
+    "CAM": "KH",
+    "ESA": "SV",
+    "SVK": "SK",
+    "SLO": "SI",
+    "KUW": "KW",
+    "SEN": "SN",
+    "SLE": "SL",
+    "KAZ": "KZ",
+    "SWE": "SE",
+    "SUD": "SD",
+    "DJI": "DJ",
+    "DEN": "DK",
+    "GER": "DE",
+    "YEM": "YE",
+    "ALG": "DZ",
+    "USA": "US",
+    "URU": "UY",
+    "LBN": "LB",
+    "TTO": "TT",
+    "SRI": "LK",
+    "LAT": "LV",
+    "LTU": "LT",
+    "LUX": "LU",
+    "LBR": "LR",
+    "LES": "LS",
+    "THA": "TH",
+    "TOG": "TG",
+    "CHA": "TD",
+    "LBA": "LY",
+    "UAE": "AE",
+    "VEN": "VE",
+    "AFG": "AF",
+    "IRQ": "IQ",
+    "ISL": "IS",
+    "ARM": "AM",
+    "ALB": "AL",
+    "ANG": "AO",
+    "ARG": "AR",
+    "AUS": "AU",
+    "AUT": "AT",
+    "IND": "IN",
+    "AZE": "AZ",
+    "IRL": "IE",
+    "INA": "ID",
+    "UKR": "UA",
+    "QAT": "QA",
+    "MOZ": "MZ",
+    "CHN": "CN",
+    "RUS": "RU",
+    "LYB": "LY"
+};
+
+app.get("/api/worldmap", async (req, res) => {
+    let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+
+        const query = `
+            SELECT c.noc AS code,
+                SUM(mt.gold) AS gold,
+                SUM(mt.silver) as silver,
+                SUM(mt.bronze) as bronze
+            FROM Countries c
+            JOIN Medal_Tally mt ON c.noc = mt.country_noc
+            GROUP BY c.noc
+        `;
+
+        const results = await connection.execute(query);
+        const medals = results.rows.map(([dbCode, gold, silver, bronze]) => {
+            const mapCode = nocmap[dbCode] || dbCode;
+            return {
+                code: mapCode,
+                gold,
+                silver,
+                bronze,
+            };
+        });
+        res.json(medals);
+
+    } catch (err) {
+        console.error("Error fetching world map data:", err);
+        res.status(500).send("Failed to fetch world map data");
+    } finally {
+        if (connection) {
+            await connection.close();
+        }
+    }
+});
+
 // Fetch dropdown options
 app.get("/api/options", async (req, res) => {
     const { sport_selection } = req.query;
     let connection;
     try {
-      connection = await oracledb.getConnection(dbConfig);
+        connection = await oracledb.getConnection(dbConfig);
 
-      let countries = [], sports = [], events = [];
+        let countries = [], sports = [], events = [];
 
-      if(sport_selection){
-        const eventQuery = `
+        if (sport_selection) {
+            const eventQuery = `
         SELECT DISTINCT event_name
         FROM Athlete_Results
         WHERE sport_name = :sport_selection
         ORDER BY event_name`;
-        const eventResults = await connection.execute(eventQuery, [sport_selection]);
-        events = eventResults.rows.map(row => row[0]);
-      } else{
-        // Fetch distinct values for each dropdown
-        const [countryResults, sportResults, eventResults] = await Promise.all([
-            connection.execute("SELECT DISTINCT country_name FROM Countries ORDER BY country_name"),
-            connection.execute("SELECT DISTINCT sport_name FROM Athlete_Results ORDER BY sport_name"),
-            connection.execute("SELECT DISTINCT event_name FROM Athlete_Results ORDER BY event_name"),
-        ]);
+            const eventResults = await connection.execute(eventQuery, [sport_selection]);
+            events = eventResults.rows.map(row => row[0]);
+        } else {
+            // Fetch distinct values for each dropdown
+            const [countryResults, sportResults, eventResults] = await Promise.all([
+                connection.execute("SELECT DISTINCT country_name FROM Countries ORDER BY country_name"),
+                connection.execute("SELECT DISTINCT sport_name FROM Athlete_Results ORDER BY sport_name"),
+                connection.execute("SELECT DISTINCT event_name FROM Athlete_Results ORDER BY event_name"),
+            ]);
 
-        countries = countryResults.rows.map(row => row[0]);
-        sports = sportResults.rows.map(row => row[0]);
-        events = eventResults.rows.map(row => row[0]);
-      }
-  
-      res.json({
-        countries,
-        sports,
-        events,
-      });
+            countries = countryResults.rows.map(row => row[0]);
+            sports = sportResults.rows.map(row => row[0]);
+            events = eventResults.rows.map(row => row[0]);
+        }
+
+        res.json({
+            countries,
+            sports,
+            events,
+        });
     } catch (err) {
-      console.error("Error fetching dropdown options:", err);
-      res.status(500).send("Failed to fetch dropdown options");
+        console.error("Error fetching dropdown options:", err);
+        res.status(500).send("Failed to fetch dropdown options");
     } finally {
-      if (connection) {
-        await connection.close();
-      }
-    }
-  });
-
-// Test function to make sure you can connect to your local db instance.
-async function testConnection() {
-    let connection;
-    try {
-        connection = await oracledb.getConnection(dbConfig);
-        console.log('Connected to Oracle Database');
-    } catch(err){
-        console.error('Could not connect to Oracle Database', err);
-    } finally {
-        if(connection){
+        if (connection) {
             await connection.close();
         }
     }
-}
+});
 
 app.post('/api/search', async (req, res) => {
     const { country, sport, athlete, event } = req.query;
+    const limit = parseInt(req.query.limit, 10) || 10;
+
     let connection;
-    try{
+    try {
         connection = await oracledb.getConnection(dbConfig);
 
         const query = `
@@ -96,16 +274,17 @@ app.post('/api/search', async (req, res) => {
             AND (:sport IS NULL OR ar.sport_name = :sport)
             AND (:athlete IS NULL OR a.name = :athlete)
             AND (:event IS NULL OR ar.event_name = :event)
-        FETCH FIRST 10 ROWS ONLY
+        FETCH FIRST :limit ROWS ONLY
         `;
-        
+
         const binds = {
             country: country || null,
             sport: sport || null,
             athlete: athlete || null,
             event: event || null,
+            limit,
         }
-        
+
         const results = await connection.execute(query, binds);
         res.json(results.rows);
 
@@ -113,17 +292,32 @@ app.post('/api/search', async (req, res) => {
         console.error('Error querying database', err);
         res.status(500).send('Database query failed');
     } finally {
-        if(connection){
-            try{
+        if (connection) {
+            try {
                 await connection.close();
-            } catch(err){
+            } catch (err) {
                 console.error('Error closing connection', err);
             }
         }
     }
 });
 
-testConnection()
+
+// Test function to make sure you can connect to your local db instance.
+async function testConnection() {
+    let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+        console.log('Connected to Oracle Database');
+    } catch (err) {
+        console.error('Could not connect to Oracle Database', err);
+    } finally {
+        if (connection) {
+            await connection.close();
+        }
+    }
+}
+// testConnection()
 
 app.listen(PORT, () => {
     console.log(`Backend running on localhost:${PORT}`);

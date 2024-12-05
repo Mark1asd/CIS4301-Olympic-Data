@@ -10,7 +10,7 @@ function WorldMap() {
   useEffect(() => {
     async function fetchCountryData() {
       try {
-        const response = await fetch('YOUR_BACKEND_API_ENDPOINT'); // Replace with your API endpoint
+        const response = await fetch('http://localhost:3001/api/worldmap');
         const data = await response.json();
 
         // Assuming the backend returns an array of countries with medal counts
@@ -39,51 +39,57 @@ function WorldMap() {
 
   return (
     <div style={{ width: '100%', height: '100vh', backgroundColor: '#282c34', position: 'relative' }}>
-      <VectorMap
-        map={worldMill}
-        backgroundColor="#282c34"
-        containerStyle={{
-          width: '100%',
-          height: '100%',
-        }}
-        zoomMin={1}
-        zoomMax={8}
-        zoomOnScroll={false}
-        focusOn={{
-          scale: zoomLevel,
-          x: 0.5,
-          y: 0.5,
-        }}
-        series={{
-          regions: [
-            {
-              scale: ['#E2E2E2', '#BDBDBD'],
-              values: {},
-            },
-          ],
-        }}
-        onRegionTipShow={(event, label, code) => {
-          // Check if country data exists for the hovered country
-          const country = countryData[code];
-          if (country) {
-            label.html(`
-              <div style="background-color: #333; color: white; padding: 10px; border-radius: 5px; min-width: 150px;">
-                <strong>${label.html()}</strong>
-                <p>Gold: ${country.gold || 0}</p>
-                <p>Silver: ${country.silver || 0}</p>
-                <p>Bronze: ${country.bronze || 0}</p>
-              </div>
-            `);
-          } else {
-            label.html(`
-              <div style="background-color: #333; color: white; padding: 10px; border-radius: 5px; min-width: 150px;">
-                <strong>${label.html()}</strong>
-                <p>No data available</p>
-              </div>
-            `);
-          }
-        }}
-      />
+      {Object.keys(countryData).length > 0 ? ( // wrapped in a conditional check to eliminate race condition issue. If countryData isn't populated, then wait till it is to render map.
+        <VectorMap
+          map={worldMill}
+          backgroundColor="#282c34"
+          containerStyle={{
+            width: '100%',
+            height: '100%',
+          }}
+          zoomMin={1}
+          zoomMax={8}
+          zoomOnScroll={false}
+          focusOn={{
+            scale: zoomLevel,
+            x: 0.5,
+            y: 0.5,
+          }}
+          series={{
+            regions: [
+              {
+                scale: ['#E2E2E2', '#FFD700'], // Scale from grey to gold based on medals
+                values: Object.fromEntries(
+                  Object.entries(countryData).map(([code, { gold }]) => [code, gold || 0]) // Use gold medal counts for coloring
+                )
+              },
+            ],
+          }}
+          onRegionTipShow={(event, label, code) => {
+            // Check if country data exists for the hovered country
+            const country = countryData[code];
+            if (country) {
+              label.html(`
+                <div style="background-color: #333; color: white; padding: 10px; border-radius: 5px; min-width: 150px;">
+                  <strong>${label.html()}</strong>
+                  <p>Gold: ${country.gold || 0}</p>
+                  <p>Silver: ${country.silver || 0}</p>
+                  <p>Bronze: ${country.bronze || 0}</p>
+                </div>
+              `);
+            } else {
+              label.html(`
+                <div style="background-color: #333; color: white; padding: 10px; border-radius: 5px; min-width: 150px;">
+                  <strong>${label.html()}</strong>
+                  <p>No data available</p>
+                </div>
+              `);
+            }
+          }}
+        />
+      ) : (
+        <div style={{ color: 'white', textAlign: 'center', marginTop: '20px' }}>Loading map data...</div>
+      )}
     </div>
   );
 }
