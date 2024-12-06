@@ -4,7 +4,7 @@ import Footer from '../components/Footer';
 import WorldMap from '../components/WorldMap'; // Adjust the path if needed
 import Graph from '../components/Graph';
 import Table from '../components/Table';
-import ScheduleTable from '../components/ScheduleTable';
+import MedalDensityTable from '../components/MedalDensityTable';
 
 function DataAccess() {
   return (
@@ -18,8 +18,8 @@ function DataAccess() {
         <Graph />
         <h2>History by Country</h2>
         <Table />
-        <h2>Schedule of Events</h2>
-        <ScheduleTable />
+        <h2>Event Data</h2>
+        <MedalDensityTable />
       </div>
       <Footer />
     </div>

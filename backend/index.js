@@ -10,8 +10,8 @@ const PORT = 3001;
 
 // Change these as necessary before running
 const dbConfig = {
-    user: 'riley.willis',
-    password: 'aYdOoZGdbp3l7La4bXXHIt82',
+    user: '',
+    password: '',
     connectString: 'oracle.cise.ufl.edu/orcl'
 };
 
@@ -169,7 +169,6 @@ const nocmap = {
     "BOL": "BO",
     "MTN": "MR",
     "MLI": "ML",
-    "GUI": "GN",
     "GBS": "GW",
     "SLE": "SL",
     "LBR": "LR",
@@ -211,6 +210,104 @@ const nocmap = {
     "LES": "LS",
 };
 
+app.get("/api/sports", async (req, res) => {let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+        const query = `
+            SELECT DISTINCT sport_name
+            FROM Events
+            ORDER BY sport_name ASC
+        `;
+        const result = await connection.execute(query);
+        const sports = result.rows.map(([sport_name]) => sport_name);
+        res.json(sports);
+    } catch (err) {
+        console.error("Error fetching sports:", err);
+        res.status(500).send("Failed to fetch sports.");
+    } finally {
+        if (connection) {
+            await connection.close();
+        }
+    }});
+
+app.get("/api/medaldensity", async (req, res) => {
+    const { sport } = req.query;
+    if (!sport) {
+        return res.status(400).send("Sport parameter is required.");
+    }
+    let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+
+        const query = `
+            SELECT 
+                CASE
+                    WHEN e.gender = 'none' THEN e.event_name || ', Mixed'
+                    ELSE e.event_name || ', ' || e.gender
+                END AS full_event_name,
+                e.sport_name,
+                COALESCE(COUNT(DISTINCT ar.athlete_id), 0) AS total_participants,
+                COALESCE(SUM(CASE WHEN ar.medal IS NOT NULL THEN 1 ELSE 0 END), 0) AS total_medals,
+                ROUND(
+                    CASE
+                        WHEN COUNT(DISTINCT ar.athlete_id) = 0 THEN 0
+                        ELSE SUM(CASE WHEN ar.medal IS NOT NULL THEN 1 ELSE 0 END) / COUNT(DISTINCT ar.athlete_id)
+                    END, 2
+                ) AS medal_density,
+                ROUND(
+                    CASE
+                        WHEN SUM(CASE WHEN ar.medal IS NOT NULL THEN 1 ELSE 0 END) = 0 THEN 0
+                        ELSE COUNT(DISTINCT ar.athlete_id) / SUM(CASE WHEN ar.medal IS NOT NULL THEN 1 ELSE 0 END)
+                    END, 2
+                ) AS athlete_medal_ratio,
+                EXTRACT(YEAR FROM g.start_date) AS year
+            FROM 
+                Events e
+            LEFT JOIN 
+                Athlete_Results ar 
+            ON 
+                CASE 
+                    WHEN e.gender = 'none' THEN e.event_name || ', Mixed'
+                    ELSE e.event_name || ', ' || e.gender
+                END = ar.event_name 
+                AND e.sport_name = ar.sport_name 
+                AND e.edition_id = ar.edition_id
+            JOIN 
+                Olympic_Games g 
+            ON 
+                e.edition_id = g.edition_id
+            WHERE 
+                e.sport_name = :sport
+            GROUP BY 
+                e.event_name, e.sport_name, e.gender, g.start_date
+            ORDER BY 
+                e.event_name ASC, medal_density DESC
+        `;
+
+        const results = await connection.execute(query, [sport]);
+
+        const formattedResults = results.rows.map(([full_event_name, sport_name, total_participants, total_medals, medal_density, athlete_medal_ratio, year]) => ({
+            full_event_name,
+            sport_name,
+            total_participants,
+            total_medals,
+            medal_density,
+            athlete_medal_ratio,
+            year
+        }));
+        
+        res.json(formattedResults);
+
+    } catch (err) {
+        console.error("Error fetching events and medal data:", err);
+        res.status(500).send("Failed to fetch events and medal data");
+    } finally {
+        if (connection) {
+            await connection.close();
+        }
+    }
+});
+
 app.get("/api/overtimegraph", async (req, res) => {
     let connection;
     try {
@@ -247,7 +344,7 @@ app.get("/api/overtimegraph", async (req, res) => {
             FROM Athlete_Results
             GROUP BY edition_id
         ) ar ON g.edition_id = ar.edition_id
-        WHERE EXTRACT(YEAR FROM g.start_date) BETWEEN 1900 AND 2020
+        WHERE EXTRACT(YEAR FROM g.start_date) BETWEEN 1908 AND 2022
         GROUP BY EXTRACT(YEAR FROM g.start_date), mt.gold, mt.silver, mt.bronze, mt.total_medals, ar.total_athletes
         ORDER BY year ASC
         `;
@@ -367,10 +464,11 @@ app.get("/api/options", async (req, res) => {
 
         if (sport_selection) {
             const eventQuery = `
-        SELECT DISTINCT event_name
-        FROM Athlete_Results
-        WHERE sport_name = :sport_selection
-        ORDER BY event_name`;
+                SELECT DISTINCT event_name
+                FROM Athlete_Results
+                WHERE sport_name = :sport_selection
+                ORDER BY event_name
+                `;
             const eventResults = await connection.execute(eventQuery, [sport_selection]);
             events = eventResults.rows.map(row => row[0]);
         } else {
