@@ -11,7 +11,6 @@ function Header() {
   const pages = [
     { path: '/', name: 'Home' },
     { path: '/data-access', name: 'Data Access' },
-    { path: '/country-data', name: "Country's Data" },
     { path: '/custom-search-tool', name: 'Custom Search Tool' },
   ];
 
