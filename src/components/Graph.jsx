@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -12,7 +12,6 @@ import {
 function Graph() {
   const [selectedType, setSelectedType] = useState('total'); // Default to 'total'
   const [data, setData] = useState({}); // State for backend data
-  const [computedData, setComputedData] = useState([]); // State for computed upper and bottom points
 
   // Fetch data from the backend
   useEffect(() => {
@@ -27,21 +26,6 @@ function Graph() {
     }
     fetchData();
   }, []);
-
-  // Compute upper and bottom points whenever data or selectedType changes
-  useEffect(() => {
-    if (data[selectedType]) {
-      const upper = data[selectedType].map((point) => ({
-        year: point.year,
-        value: point.medals,
-      }));
-      const bottom = data[selectedType].map((point) => ({
-        year: point.year,
-        value: 0,
-      }));
-      setComputedData({ upper, bottom });
-    }
-  }, [data, selectedType]);
 
   return (
     <div style={{ color: 'white' }}>
@@ -67,9 +51,9 @@ function Graph() {
       </div>
 
       {/* Graph */}
-      {computedData.upper && computedData.upper.length > 0 ? (
+      {data[selectedType] && data[selectedType].length > 0 ? (
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={computedData.upper}>
+          <LineChart data={data[selectedType]}>
             <CartesianGrid strokeDasharray="3 3" stroke="#444" />
             <XAxis dataKey="year" stroke="white" />
             <YAxis stroke="white" />
@@ -82,23 +66,12 @@ function Graph() {
               itemStyle={{ color: 'white' }}
               labelStyle={{ color: 'white' }}
             />
-            {/* Upper Line */}
             <Line
               type="monotone"
-              data={computedData.upper}
-              dataKey="value"
+              dataKey={selectedType === 'efficiency' ? 'efficiency' : 'medals'}
               stroke="white"
               strokeWidth={2}
               dot={{ r: 5, fill: 'white' }}
-            />
-            {/* Bottom Line */}
-            <Line
-              type="monotone"
-              data={computedData.bottom}
-              dataKey="value"
-              stroke="#8884d8"
-              strokeWidth={2}
-              dot={{ r: 5, fill: '#8884d8' }}
             />
           </LineChart>
         </ResponsiveContainer>
