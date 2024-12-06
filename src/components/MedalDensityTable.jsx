@@ -89,10 +89,10 @@ function MedalDensityTable() {
                 <th style={{ border: '1px solid #ddd', padding: '8px' }}>Sport</th>
                 <th style={{ border: '1px solid #ddd', padding: '8px' }}>Event</th>
                 <th style={{ border: '1px solid #ddd', padding: '8px' }}>Year</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px' }}>Total Participants</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px' }}>Total Medals Awarded</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px' }}>Medal Density</th>
-                <th style={{ border: '1px solid #ddd', padding: '8px' }}>Avg. Athletes/Medal</th>
+                <th style={{ border: '1px solid #ddd', padding: '8px' }}># of Athletes</th>
+                <th style={{ border: '1px solid #ddd', padding: '8px' }}>Medals Awarded</th>
+                <th style={{ border: '1px solid #ddd', padding: '8px' }}>Medal Density (Efficiency)</th>
+                <th style={{ border: '1px solid #ddd', padding: '8px' }}>Avg. Athletes per Medal (Competition)</th>
               </tr>
             </thead>
             <tbody>

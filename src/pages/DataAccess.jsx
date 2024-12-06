@@ -18,7 +18,7 @@ function DataAccess() {
         <Graph />
         <h2>History by Country</h2>
         <Table />
-        <h2>Event Data</h2>
+        <h2>Event Medal Data</h2>
         <MedalDensityTable />
       </div>
       <Footer />
