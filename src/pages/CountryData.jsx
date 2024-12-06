@@ -135,6 +135,7 @@ const prepareChartData = () => {
     },
     hAxis: {
       textStyle: { color: "#FFFFFF" }, // White axis text
+      minValue: 0,
     },
     vAxis: {
       textStyle: { color: "#FFFFFF" }, // White axis text
