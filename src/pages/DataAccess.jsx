@@ -15,6 +15,9 @@ function DataAccess() {
       </div>
       <div style={{ flex: 1, textAlign: 'center', padding: '20px' }}>
         <h2>Total Medals Earned Over Time</h2>
+        <p style={{ marginTop: '10px', padding: '10px', color: 'lightgray', fontSize: '16px' }}>
+          Summer and Winter Olympics
+        </p>
         <Graph />
         <h2>History by Country</h2>
         <Table />
