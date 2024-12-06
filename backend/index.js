@@ -1,3 +1,6 @@
+
+require('dotenv').config();
+
 const oracledb = require('oracledb');
 const express = require('express');
 const cors = require('cors');
@@ -10,8 +13,8 @@ const PORT = 3001;
 
 // Change these as necessary before running
 const dbConfig = {
-    user: '',
-    password: '',
+    user: 'riley.willis',
+    password: 'aYdOoZGdbp3l7La4bXXHIt82',
     connectString: 'oracle.cise.ufl.edu/orcl'
 };
 
@@ -376,6 +379,8 @@ app.get("/api/overtimegraph", async (req, res) => {
     }
     });
 
+
+
 app.get("/api/countrytable", async (req, res) => {
     let connection;
     try {
@@ -489,12 +494,61 @@ app.get("/api/options", async (req, res) => {
             sports,
             events,
         });
+
     } catch (err) {
         console.error("Error fetching dropdown options:", err);
         res.status(500).send("Failed to fetch dropdown options");
     } finally {
         if (connection) {
             await connection.close();
+        }
+    }
+});
+
+// API Endpoint: Get Data for a Specific Country
+app.get("/api/country-data/:code", async (req, res) => {
+    const inputCode = req.params.code.toUpperCase(); // Frontend-provided code (ISO or NOC)
+    const dbCode = Object.keys(nocmap).find(key => nocmap[key] === inputCode) || inputCode; // Reverse mapping
+
+    let connection;
+
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+
+        const query = `
+            SELECT EXTRACT(YEAR FROM g.start_date) AS year,
+                SUM(NVL(mt.gold, 0)) AS gold,
+                SUM(NVL(mt.silver, 0)) AS silver,
+                SUM(NVL(mt.bronze, 0)) AS bronze,
+                SUM(NVL(mt.gold, 0) + NVL(mt.silver, 0) + NVL(mt.bronze, 0)) AS total
+            FROM Olympic_Games g
+            JOIN Medal_Tally mt ON g.edition_id = mt.edition_id
+            WHERE mt.country_noc = :dbCode
+            GROUP BY EXTRACT(YEAR FROM g.start_date)
+            ORDER BY year ASC
+        `;
+
+        const binds = { dbCode }; // Use the mapped NOC code
+        const options = { outFormat: oracledb.OUT_FORMAT_OBJECT };
+
+        const result = await connection.execute(query, binds, options);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "No data found for the specified country." });
+        }
+
+        res.json(result.rows);
+
+    } catch (err) {
+        console.error(`Error fetching data for country ${dbCode}:`, err);
+        res.status(500).json({ message: "Internal server error." });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error("Error closing connection:", err);
+            }
         }
     }
 });
