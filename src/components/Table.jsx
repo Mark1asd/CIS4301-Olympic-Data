@@ -10,9 +10,19 @@ function Table() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await fetch('YOUR_BACKEND_API_ENDPOINT'); // Replace with API endpoint
+        const response = await fetch('http://localhost:3001/api/countrytable'); // Replace with API endpoint
         const result = await response.json();
-        setData(result);
+
+        const processedResult = result.map((item, index) => ({
+          code: item.code,
+          country: item.country,
+          rank: index + 1,
+          gold: item.gold || 0,
+          silver: item.silver || 0,
+          bronze: item.bronze || 0,
+          total: item.total || 0,
+        }));
+        setData(processedResult)
       } catch (error) {
         console.error('Error fetching data:', error);
       }

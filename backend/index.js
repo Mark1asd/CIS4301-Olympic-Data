@@ -16,7 +16,6 @@ const dbConfig = {
 };
 
 // Giant list of country codes in our DB and those used by the frontend's map library paired up.
-// NOTE: This list is unfinished. Will continue to update later, reference and compare the country code txts in OlympicDataset.
 const nocmap = {
     "BAN": "BD",
     "BEL": "BE",
@@ -211,6 +210,46 @@ const nocmap = {
     "SOM": "SO",
     "LES": "LS",
 };
+
+app.get("/api/countrytable", async (req, res) => {
+    let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+
+        const query = `
+        SELECT c.noc AS code,
+            c.country_name AS country,
+            SUM(NVL(mt.gold, 0)) AS gold,
+            SUM(NVL(mt.silver, 0)) as silver,
+            SUM(NVL(mt.bronze, 0)) as bronze,
+            SUM(NVL(mt.gold + mt.silver + mt.bronze, 0)) AS total
+        FROM Countries c
+        JOIN Medal_Tally mt ON c.noc = mt.country_noc
+        GROUP BY c.noc, c.country_name
+        ORDER BY total DESC, gold DESC, silver DESC, bronze DESC
+        `;
+        const results = await connection.execute(query);
+        const medals = results.rows.map(([code, country, gold, silver, bronze, total]) => {
+            return {
+                code,
+                country,
+                gold,
+                silver,
+                bronze,
+                total
+            };
+        });
+        res.json(medals);
+
+    } catch (err) {
+        console.error("Error fetching country table data:", err);
+        res.status(500).send("Failed to fetch country table data");
+    } finally {
+        if (connection) {
+            await connection.close();
+        }
+    }
+});
 
 app.get("/api/worldmap", async (req, res) => {
     let connection;
