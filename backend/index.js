@@ -223,10 +223,10 @@ app.get("/api/overtimegraph", async (req, res) => {
             SUM(NVL(mt.silver, 0)) AS silver,
             SUM(NVL(mt.bronze, 0)) AS bronze,
             SUM(NVL(mt.gold, 0) + NVL(mt.silver, 0) + NVL(mt.bronze, 0)) AS total_medals,
-            COALESCE(ar.total_athletes, 0) AS total_athletes,
+            NVL(ar.total_athletes, 0) AS total_athletes,
             CASE
                 WHEN EXTRACT(YEAR FROM g.start_date) = 1906 THEN 0
-                WHEN COALESCE(ar.total_athletes, 0) = 0 THEN 0
+                WHEN NVL(ar.total_athletes, 0) = 0 THEN 0
                 ELSE ROUND(SUM(NVL(mt.gold, 0) + NVL(mt.silver, 0) + NVL(mt.bronze, 0)) / ar.total_athletes, 3)
             END AS efficiency
         FROM Olympic_Games g
