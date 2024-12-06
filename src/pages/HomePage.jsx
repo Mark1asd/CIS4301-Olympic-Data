@@ -9,7 +9,6 @@ function HomePage() {
     <div style={{ backgroundColor: '#282c34', color: 'white', minHeight: '100vh' }}>
       <Header />
       <div style={{ textAlign: 'center', margin: '20vh 0', fontFamily: 'Arial, sans-serif' }}>
-        <h1>About Us Info</h1>
         <h2>Olympic</h2>
         <NavLink to="/data-access" style={{ textDecoration: 'none' }}>
           <Button variant="contained" color="primary">
