@@ -10,10 +10,8 @@ function App() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/data-access" element={<DataAccess />} />
-      <Route path="/country-data" element={<CountryData />} />
+      <Route path="/country-data/:countryCode" element={<CountryData />} />
       <Route path="/custom-search-tool" element={<CustomSearchTool />} />
     </Routes>
   );
 }
-
-export default App;
