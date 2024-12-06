@@ -17,7 +17,7 @@ function Graph() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await fetch('YOUR_BACKEND_API_ENDPOINT'); // Replace with your API endpoint
+        const response = await fetch('http://localhost:3001/api/overtimegraph'); // Replace with your API endpoint
         const result = await response.json();
         setData(result); // Assume the backend returns an object with medal types as keys
       } catch (error) {

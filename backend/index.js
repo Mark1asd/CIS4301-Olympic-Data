@@ -10,8 +10,8 @@ const PORT = 3001;
 
 // Change these as necessary before running
 const dbConfig = {
-    user: '',
-    password: '',
+    user: 'riley.willis',
+    password: 'aYdOoZGdbp3l7La4bXXHIt82',
     connectString: 'oracle.cise.ufl.edu/orcl'
 };
 
@@ -211,6 +211,48 @@ const nocmap = {
     "LES": "LS",
 };
 
+app.get("/api/overtimegraph", async (req, res) => {
+    let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+        
+        const query = `
+        SELECT EXTRACT(YEAR FROM g.start_date) AS year,
+            SUM(NVL(mt.gold, 0)) AS gold,
+            SUM(NVL(mt.silver, 0)) AS silver,
+            SUM(NVL(mt.bronze, 0)) AS bronze,
+            SUM(NVL(mt.gold, 0) + NVL(mt.silver, 0) + NVL(mt.bronze, 0)) AS total
+            FROM Olympic_Games g
+            JOIN Medal_Tally mt ON g.edition_id = mt.edition_id
+            GROUP BY EXTRACT(YEAR FROM g.start_date)
+            ORDER BY year ASC
+        `;
+
+        const results = await connection.execute(query);
+
+        const goldData = [];
+        const silverData = [];
+        const bronzeData = [];
+        const totalData = [];
+
+        results.rows.forEach(([year, gold, silver, bronze, total]) => {
+            goldData.push({ year, medals: gold });
+            silverData.push({ year, medals: silver });
+            bronzeData.push({ year, medals: bronze });
+            totalData.push({ year, medals: total });
+        });
+
+        res.json({gold: goldData, silver: silverData, bronze: bronzeData, total: totalData});
+    } catch(err) {
+        console.error("Error fetching medals over time data:", err);
+        res.status(500).send("Failed to fetch medals over time data");
+    } finally {
+        if (connection) {
+            await connection.close();
+        }
+    }
+    });
+
 app.get("/api/countrytable", async (req, res) => {
     let connection;
     try {
@@ -222,7 +264,7 @@ app.get("/api/countrytable", async (req, res) => {
             SUM(NVL(mt.gold, 0)) AS gold,
             SUM(NVL(mt.silver, 0)) as silver,
             SUM(NVL(mt.bronze, 0)) as bronze,
-            SUM(NVL(mt.gold + mt.silver + mt.bronze, 0)) AS total
+            SUM(NVL(mt.gold, 0) + NVL(mt.silver, 0) + NVL(mt.bronze, 0)) AS total
         FROM Countries c
         JOIN Medal_Tally mt ON c.noc = mt.country_noc
         GROUP BY c.noc, c.country_name
