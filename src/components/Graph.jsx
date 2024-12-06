@@ -31,7 +31,7 @@ function Graph() {
     <div style={{ color: 'white' }}>
       {/* Buttons for Medal Type */}
       <div style={{ marginBottom: '20px' }}>
-        {['gold', 'silver', 'bronze', 'total'].map((type) => (
+        {['gold', 'silver', 'bronze', 'total', 'efficiency'].map((type) => (
           <button
             key={type}
             onClick={() => setSelectedType(type)}
@@ -68,7 +68,7 @@ function Graph() {
             />
             <Line
               type="monotone"
-              dataKey="medals"
+              dataKey={selectedType === 'efficiency' ? 'efficiency' : 'medals'}
               stroke="white"
               strokeWidth={2}
               dot={{ r: 5, fill: 'white' }}
@@ -77,7 +77,7 @@ function Graph() {
         </ResponsiveContainer>
       ) : (
         <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          No data available for {selectedType} medals.
+          Loading data for {selectedType} medals...
         </div>
       )}
     </div>

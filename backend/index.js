@@ -217,15 +217,39 @@ app.get("/api/overtimegraph", async (req, res) => {
         connection = await oracledb.getConnection(dbConfig);
         
         const query = `
-        SELECT EXTRACT(YEAR FROM g.start_date) AS year,
+        SELECT 
+            EXTRACT(YEAR FROM g.start_date) AS year,
             SUM(NVL(mt.gold, 0)) AS gold,
             SUM(NVL(mt.silver, 0)) AS silver,
             SUM(NVL(mt.bronze, 0)) AS bronze,
-            SUM(NVL(mt.gold, 0) + NVL(mt.silver, 0) + NVL(mt.bronze, 0)) AS total
-            FROM Olympic_Games g
-            JOIN Medal_Tally mt ON g.edition_id = mt.edition_id
-            GROUP BY EXTRACT(YEAR FROM g.start_date)
-            ORDER BY year ASC
+            SUM(NVL(mt.gold, 0) + NVL(mt.silver, 0) + NVL(mt.bronze, 0)) AS total_medals,
+            COALESCE(ar.total_athletes, 0) AS total_athletes,
+            CASE
+                WHEN EXTRACT(YEAR FROM g.start_date) = 1906 THEN 0
+                WHEN COALESCE(ar.total_athletes, 0) = 0 THEN 0
+                ELSE ROUND(SUM(NVL(mt.gold, 0) + NVL(mt.silver, 0) + NVL(mt.bronze, 0)) / ar.total_athletes, 2)
+            END AS efficiency
+        FROM Olympic_Games g
+        LEFT JOIN (
+            SELECT 
+                mt.edition_id,
+                SUM(NVL(mt.gold, 0)) AS gold,
+                SUM(NVL(mt.silver, 0)) AS silver,
+                SUM(NVL(mt.bronze, 0)) AS bronze,
+                SUM(NVL(mt.gold, 0) + NVL(mt.silver, 0) + NVL(mt.bronze, 0)) AS total_medals
+            FROM Medal_Tally mt
+            GROUP BY mt.edition_id
+        ) mt ON g.edition_id = mt.edition_id
+        LEFT JOIN (
+            SELECT 
+                edition_id,
+                COUNT(DISTINCT athlete_id) AS total_athletes
+            FROM Athlete_Results
+            GROUP BY edition_id
+        ) ar ON g.edition_id = ar.edition_id
+        WHERE EXTRACT(YEAR FROM g.start_date) BETWEEN 1900 AND 2020
+        GROUP BY EXTRACT(YEAR FROM g.start_date), mt.gold, mt.silver, mt.bronze, mt.total_medals, ar.total_athletes
+        ORDER BY year ASC
         `;
 
         const results = await connection.execute(query);
@@ -234,15 +258,17 @@ app.get("/api/overtimegraph", async (req, res) => {
         const silverData = [];
         const bronzeData = [];
         const totalData = [];
+        const efficiencyData = [];
 
-        results.rows.forEach(([year, gold, silver, bronze, total]) => {
+        results.rows.forEach(([year, gold, silver, bronze, total, total_athletes, efficiency]) => {
             goldData.push({ year, medals: gold });
             silverData.push({ year, medals: silver });
             bronzeData.push({ year, medals: bronze });
             totalData.push({ year, medals: total });
+            efficiencyData.push({ year, efficiency: efficiency });
         });
 
-        res.json({gold: goldData, silver: silverData, bronze: bronzeData, total: totalData});
+        res.json({gold: goldData, silver: silverData, bronze: bronzeData, total: totalData, efficiency: efficiencyData});
     } catch(err) {
         console.error("Error fetching medals over time data:", err);
         res.status(500).send("Failed to fetch medals over time data");
