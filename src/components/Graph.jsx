@@ -28,7 +28,7 @@ function Graph() {
   }, []);
 
   return (
-    <div style={{ color: 'red', position: 'relative' }}>
+    <div style={{ color: 'white', position: 'relative' }}>
       {/* Buttons for Medal Type */}
       <div style={{ marginBottom: '20px' }}>
         {['gold', 'silver', 'bronze', 'total', 'efficiency'].map((type) => (
@@ -96,7 +96,7 @@ function Graph() {
               zIndex: 10,
             }}
           >
-            Did you know? The Winter Olympics began in 1924 in France. On the graph, the upper dots represent the Summer Games, while the lower dots illustrate the Winter Games, starting from their inception in 1924.
+            Did you know? The first Winter Olympics were held in France in 1924. On the graph, the upper dots represent the Summer Games, while the lower dots illustrate the Winter Games, starting from their inception in 1924.
           </div>
         </span>
       </div>
@@ -112,7 +112,7 @@ function Graph() {
               contentStyle={{
                 backgroundColor: '#444',
                 border: '1px solid white',
-                color: 'red',
+                color: 'white',
               }}
               itemStyle={{ color: 'white' }}
               labelStyle={{ color: 'white' }}
