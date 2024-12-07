@@ -3,6 +3,10 @@
 // DB_USER=your_username 
 //DB_PASSWORD=your_password 
 //DB_CONNECT_STRING=oracle.cise.ufl.edu/orcl
+/*Example:
+DB_USER=yvoryk
+DB_PASSWORD=eTLkdmDdbp3l7La4bXXHIt31
+DB_CONNECT_STRING=oracle.cise.ufl.edu/orcl*/
 require('dotenv').config();
 
 const oracledb = require('oracledb');
@@ -10,7 +14,9 @@ const express = require('express');
 const cors = require('cors');
 
 // For Redis - npm install redis
-// If not installed on machine - brew install redis
+//cd C:\Redis-x64-3.0.504 (Navigate to the Redis Directory)
+//.\redis-server.exe
+// If not installed on machine - brew install redis(only for mac users)
 // To Start - redis-server in new terminal window
 const redis = require("redis");
 const client = redis.createClient();
