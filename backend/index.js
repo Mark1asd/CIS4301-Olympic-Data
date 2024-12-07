@@ -36,10 +36,9 @@ const PORT = 3001;
 
 // Change these as necessary before running
 const dbConfig = {
-    user: 'SYS',
-    password: 'admin1086',
-    connectString: '127.0.0.1:1521/FREE',
-    privilege: oracledb.SYSDBA
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    connectString: process.env.DB_CONNECT_STRING
 };
 
 // Giant list of country codes in our DB and those used by the frontend's map library paired up.
