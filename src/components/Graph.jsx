@@ -28,7 +28,7 @@ function Graph() {
   }, []);
 
   return (
-    <div style={{ color: 'white', position: 'relative' }}>
+    <div style={{ color: 'red', position: 'relative' }}>
       {/* Buttons for Medal Type */}
       <div style={{ marginBottom: '20px' }}>
         {['gold', 'silver', 'bronze', 'total', 'efficiency'].map((type) => (
@@ -112,7 +112,7 @@ function Graph() {
               contentStyle={{
                 backgroundColor: '#444',
                 border: '1px solid white',
-                color: 'white',
+                color: 'red',
               }}
               itemStyle={{ color: 'white' }}
               labelStyle={{ color: 'white' }}
