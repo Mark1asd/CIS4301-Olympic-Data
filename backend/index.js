@@ -1,8 +1,8 @@
 // For Secrets - npm install dotenv
 // Create a .env file in the root directory and add the following:
 // DB_USER=your_username 
-//DB_PASSWORD=your_password 
-//DB_CONNECT_STRING=oracle.cise.ufl.edu/orcl
+// DB_PASSWORD=your_password 
+// DB_CONNECT_STRING=oracle.cise.ufl.edu/orcl
 require('dotenv').config();
 
 const oracledb = require('oracledb');
@@ -16,6 +16,7 @@ const cors = require('cors');
 // To Start - redis-server in new terminal window
 const redis = require("redis");
 const client = redis.createClient();
+
 // Debug for Redis to let you know if it's working
 (async () => {
     try {
@@ -707,9 +708,6 @@ app.get("/api/options", async (req, res) => {
         }
     }
 });
-  
-// uncomment to test the connection
-// testConnection()
 
 app.listen(PORT, () => {
     console.log(`Backend running on localhost:${PORT}`);

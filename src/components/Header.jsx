@@ -12,7 +12,6 @@ function Header() {
     { path: '/', name: 'Home' },
     { path: '/data-access', name: 'Data Access' },
     { path: '/custom-search-tool', name: 'Custom Search Tool' },
-    {path: '/country-data', name: 'Country Data' }
   ];
 
   return (
