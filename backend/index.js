@@ -3,10 +3,6 @@
 // DB_USER=your_username 
 //DB_PASSWORD=your_password 
 //DB_CONNECT_STRING=oracle.cise.ufl.edu/orcl
-/*Example:
-DB_USER=yvoryk
-DB_PASSWORD=eTLkdmDdbp3l7La4bXXHIt31
-DB_CONNECT_STRING=oracle.cise.ufl.edu/orcl*/
 require('dotenv').config();
 
 const oracledb = require('oracledb');
@@ -484,52 +480,76 @@ app.get("/api/worldmap", async (req, res) => {
     }
 });
 
-// Fetch dropdown options
-app.get("/api/options", async (req, res) => {
-    const { sport_selection } = req.query;
+// API Endpoint: Custom Search Tool 
+app.post('/api/search', async (req, res) => {
+    const { country, sport, athlete, event } = req.query;
+    // Limit the number of results returned, default to 10
+    const limit = parseInt(req.query.limit, 10) || 10;
+
+    // Generate a unique cache key based on the search parameters
+    const cacheKey = `search:${country || 'all'}:${sport || 'all'}:${athlete || 'all'}:${event || 'all'}:limit:${limit}`;
+
     let connection;
     try {
-        connection = await oracledb.getConnection(dbConfig);
-
-        let countries = [], sports = [], events = [];
-
-        if (sport_selection) {
-            const eventQuery = `
-                SELECT DISTINCT event_name
-                FROM Athlete_Results
-                WHERE sport_name = :sport_selection
-                ORDER BY event_name
-                `;
-            const eventResults = await connection.execute(eventQuery, [sport_selection]);
-            events = eventResults.rows.map(row => row[0]);
-        } else {
-            // Fetch distinct values for each dropdown
-            const [countryResults, sportResults, eventResults] = await Promise.all([
-                connection.execute("SELECT DISTINCT country_name FROM Countries ORDER BY country_name"),
-                connection.execute("SELECT DISTINCT sport_name FROM Athlete_Results ORDER BY sport_name"),
-                connection.execute("SELECT DISTINCT event_name FROM Athlete_Results ORDER BY event_name"),
-            ]);
-
-            countries = countryResults.rows.map(row => row[0]);
-            sports = sportResults.rows.map(row => row[0]);
-            events = eventResults.rows.map(row => row[0]);
+        // Check Redis cache for existing data
+        const cachedData = await client.get(cacheKey);
+        if (cachedData) {
+            console.log(`Data retrieved from cache for ${cacheKey}`);
+            return res.json(JSON.parse(cachedData));
         }
 
-        res.json({
-            countries,
-            sports,
-            events,
-        });
+        connection = await oracledb.getConnection(dbConfig);
 
+        // Query to fetch athlete results based on search parameters
+        const query = `
+        SELECT 
+            a.name AS athlete_name,
+            c.country_name,
+            ar.sport_name,
+            ar.event_name,
+            ar.medal
+        FROM Athlete_Results ar
+        JOIN Athletes a ON ar.athlete_id = a.athlete_id
+        JOIN Countries c ON ar.country_noc = c.noc
+        WHERE 1=1
+            AND (:country IS NULL OR c.country_name = :country)
+            AND (:sport IS NULL OR ar.sport_name = :sport)
+            AND (:athlete IS NULL OR a.name = :athlete)
+            AND (:event IS NULL OR ar.event_name = :event)
+        FETCH FIRST :limit ROWS ONLY
+        `;
+
+        const binds = {
+            country: country || null,
+            sport: sport || null,
+            athlete: athlete || null,
+            event: event || null,
+            limit,
+        };
+
+        const results = await connection.execute(query, binds);
+
+        // Cache the results in Redis with a 5-minute expiration
+        await client.set(cacheKey, JSON.stringify(results.rows), { EX: 300 });
+
+        //Uncomment to debug Cache Key
+        //console.log(`Cached data for ${cacheKey}`);
+
+        res.json(results.rows);
     } catch (err) {
-        console.error("Error fetching dropdown options:", err);
-        res.status(500).send("Failed to fetch dropdown options");
+        console.error('Error querying database', err);
+        res.status(500).send('Database query failed');
     } finally {
         if (connection) {
-            await connection.close();
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection', err);
+            }
         }
     }
 });
+
 
 // API Endpoint: Get Data for Specific Country
 app.get("/api/country-data/:code", async (req, res) => {
@@ -537,7 +557,7 @@ app.get("/api/country-data/:code", async (req, res) => {
     const dbCode = Object.keys(nocmap).find((key) => nocmap[key] === inputCode) || inputCode;
     const cacheKey = `country-data:${dbCode}`;
 
-    // Debug for Cache Key
+    // Uncomment to debug Cache Key
     //console.log("Generated Cache Key:", cacheKey);
 
 
@@ -546,7 +566,7 @@ app.get("/api/country-data/:code", async (req, res) => {
         //Check Redis cache
         const cachedData = await client.get(cacheKey);
         if (cachedData) {
-            // Debug for Cached data
+            // Uncomment to debug Cached data
             //console.log(`Data retrieved from cache for ${cacheKey}`);
             return res.json(JSON.parse(cachedData));
         }
@@ -593,72 +613,102 @@ app.get("/api/country-data/:code", async (req, res) => {
   }
 });
 
-app.post('/api/search', async (req, res) => {
-    const { country, sport, athlete, event } = req.query;
-    const limit = parseInt(req.query.limit, 10) || 10;
+// API Endpoint: Dropdown Options
+app.get("/api/options", async (req, res) => {
+    const { country, sport } = req.query;
+    const cacheKey = `dropdown-options:${country || "all"}:${sport || "all"}`;
 
     let connection;
     try {
-        connection = await oracledb.getConnection(dbConfig);
-
-        const query = `
-        SELECT 
-            a.name AS athlete_name,
-            c.country_name,
-            ar.sport_name,
-            ar.event_name,
-            ar.medal
-        FROM Athlete_Results ar
-        JOIN Athletes a ON ar.athlete_id = a.athlete_id
-        JOIN Countries c ON ar.country_noc = c.noc
-        WHERE 1=1
-            AND (:country IS NULL OR c.country_name = :country)
-            AND (:sport IS NULL OR ar.sport_name = :sport)
-            AND (:athlete IS NULL OR a.name = :athlete)
-            AND (:event IS NULL OR ar.event_name = :event)
-        FETCH FIRST :limit ROWS ONLY
-        `;
-
-        const binds = {
-            country: country || null,
-            sport: sport || null,
-            athlete: athlete || null,
-            event: event || null,
-            limit,
+        // Check Redis cache
+        const cachedData = await client.get(cacheKey);
+        if (cachedData) {
+            console.log(`Data retrieved from cache for ${cacheKey}`);
+            return res.json(JSON.parse(cachedData));
         }
 
-        const results = await connection.execute(query, binds);
-        res.json(results.rows);
+        connection = await oracledb.getConnection(dbConfig);
+        console.log("Incoming request query parameters:", req.query);
 
+        let countries = [], sports = [], events = [];
+
+        if (sport) {
+            // Fetch events based on selected sport and optionally country
+            const eventQuery = `
+                SELECT DISTINCT event_name
+                FROM Athlete_Results
+                WHERE sport_name = :sport
+                  AND (:country IS NULL OR country_noc = (SELECT noc FROM Countries WHERE country_name = :country))
+                ORDER BY event_name
+            `;
+            const binds = { sport: sport || null, country: country || null };
+
+            // Uncomment to debug the query and binds
+            //console.log("Executing eventQuery with binds:", binds);
+
+            const eventResults = await connection.execute(eventQuery, binds);
+            events = eventResults.rows.map(row => row[0]);
+
+        } else if (country) {
+            // Fetch sports based on selected country
+            const sportQuery = `
+                SELECT DISTINCT sport_name
+                FROM Athlete_Results
+                WHERE country_noc = (SELECT noc FROM Countries WHERE country_name = :country)
+                ORDER BY sport_name
+            `;
+            const binds = { country };
+            // Uncomment to debug the query and binds
+            //console.log("Executing sportQuery with binds:", binds);
+
+            const sportResults = await connection.execute(sportQuery, binds);
+            sports = sportResults.rows.map(row => row[0]);
+
+        } else {
+            // Fetch all countries with associated sports and fetch all sports
+            const countryQuery = `
+                SELECT DISTINCT c.country_name
+                FROM Countries c
+                JOIN Athlete_Results ar ON c.noc = ar.country_noc
+                ORDER BY c.country_name
+            `;
+            // Fetch all sports again for dropdown options
+            const sportQuery = "SELECT DISTINCT sport_name FROM Athlete_Results ORDER BY sport_name";
+
+            // Uncomment to debug the queries
+            //console.log("Executing queries to fetch all countries with sports and all sports");
+
+            const [countryResults, sportResults] = await Promise.all([
+                connection.execute(countryQuery),
+                connection.execute(sportQuery)
+            ]);
+
+            // extract country names and sport names from the query results
+            countries = countryResults.rows.map(row => row[0]);
+            sports = sportResults.rows.map(row => row[0]);
+        }
+
+        const result = { countries, sports, events };
+
+        // Cache the results in Redis with a 5-minute expiration
+        await client.set(cacheKey, JSON.stringify(result), { EX: 300 });
+        console.log(`Cached data for ${cacheKey}`);
+        return res.json(result);
     } catch (err) {
-        console.error('Error querying database', err);
-        res.status(500).send('Database query failed');
+        console.error("Error fetching dropdown options:", err);
+        res.status(500).send("Failed to fetch dropdown options");
     } finally {
         if (connection) {
             try {
                 await connection.close();
             } catch (err) {
-                console.error('Error closing connection', err);
+                console.error("Error closing database connection:", err.message);
             }
         }
     }
 });
-
-
-// Test function to make sure you can connect to your local db instance.
-async function testConnection() {
-    let connection;
-    try {
-        connection = await oracledb.getConnection(dbConfig);
-        console.log('Connected to Oracle Database');
-    } catch (err) {
-        console.error('Could not connect to Oracle Database', err);
-    } finally {
-        if (connection) {
-            await connection.close();
-        }
-    }
-}
+  
+// uncomment to test the connection
 // testConnection()
 
 app.listen(PORT, () => {
