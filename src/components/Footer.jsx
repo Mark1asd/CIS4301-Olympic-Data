@@ -5,7 +5,7 @@ function Footer() {
     <footer style={{ textAlign: 'center', padding: '20px', backgroundColor: '#282c34', color: 'white', marginTop: '30px' }}>
       <p style={{ margin: 0 }}>
         <a
-          href="https://www.linkedin.com/feed/?trk=guest_homepage-basic_google-one-tap-submit"
+          href="https://www.linkedin.com/me?trk=p_mwlite_feed-secondary_nav"
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: 'white', textDecoration: 'none', margin: '0 10px' }}
@@ -14,7 +14,7 @@ function Footer() {
         </a>
         |
         <a
-          href="https://www.instagram.com/yaroslav_waryk/"
+          href="https://www.instagram.com/olympicdata/"
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: 'white', textDecoration: 'none', margin: '0 10px' }}
