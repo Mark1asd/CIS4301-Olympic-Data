@@ -1,6 +1,35 @@
+// For Secrets - npm install dotenv
+// Create a .env file in the root directory and add the following:
+// DB_USER=your_username 
+//DB_PASSWORD=your_password 
+//DB_CONNECT_STRING=oracle.cise.ufl.edu/orcl
+/*Example:
+DB_USER=yvoryk
+DB_PASSWORD=eTLkdmDdbp3l7La4bXXHIt31
+DB_CONNECT_STRING=oracle.cise.ufl.edu/orcl*/
+require('dotenv').config();
+
 const oracledb = require('oracledb');
 const express = require('express');
 const cors = require('cors');
+
+// For Redis - npm install redis
+//cd C:\Redis-x64-3.0.504 (Navigate to the Redis Directory)
+//.\redis-server.exe
+// If not installed on machine - brew install redis(only for mac users)
+// To Start - redis-server in new terminal window
+const redis = require("redis");
+const client = redis.createClient();
+// Debug for Redis to let you know if it's working
+(async () => {
+    try {
+      await client.connect();
+      console.log("Redis client connected successfully");
+    } catch (err) {
+      console.error("Redis client connection error:", err);
+    }
+  })();
+
 
 const app = express();
 app.use(cors({ origin: ['http://localhost:3000'] }));
@@ -10,9 +39,9 @@ const PORT = 3001;
 
 // Change these as necessary before running
 const dbConfig = {
-    user: 'riley.willis',
-    password: 'aYdOoZGdbp3l7La4bXXHIt82',
-    connectString: 'oracle.cise.ufl.edu/orcl'
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    connectString: process.env.DB_CONNECT_STRING
 };
 
 // Giant list of country codes in our DB and those used by the frontend's map library paired up.
@@ -169,7 +198,6 @@ const nocmap = {
     "BOL": "BO",
     "MTN": "MR",
     "MLI": "ML",
-    "GUI": "GN",
     "GBS": "GW",
     "SLE": "SL",
     "LBR": "LR",
@@ -211,6 +239,104 @@ const nocmap = {
     "LES": "LS",
 };
 
+app.get("/api/sports", async (req, res) => {let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+        const query = `
+            SELECT DISTINCT sport_name
+            FROM Events
+            ORDER BY sport_name ASC
+        `;
+        const result = await connection.execute(query);
+        const sports = result.rows.map(([sport_name]) => sport_name);
+        res.json(sports);
+    } catch (err) {
+        console.error("Error fetching sports:", err);
+        res.status(500).send("Failed to fetch sports.");
+    } finally {
+        if (connection) {
+            await connection.close();
+        }
+    }});
+
+app.get("/api/medaldensity", async (req, res) => {
+    const { sport } = req.query;
+    if (!sport) {
+        return res.status(400).send("Sport parameter is required.");
+    }
+    let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+
+        const query = `
+            SELECT 
+                CASE
+                    WHEN e.gender = 'none' THEN e.event_name || ', Mixed'
+                    ELSE e.event_name || ', ' || e.gender
+                END AS full_event_name,
+                e.sport_name,
+                COALESCE(COUNT(DISTINCT ar.athlete_id), 0) AS total_participants,
+                COALESCE(SUM(CASE WHEN ar.medal IS NOT NULL THEN 1 ELSE 0 END), 0) AS total_medals,
+                ROUND(
+                    CASE
+                        WHEN COUNT(DISTINCT ar.athlete_id) = 0 THEN 0
+                        ELSE SUM(CASE WHEN ar.medal IS NOT NULL THEN 1 ELSE 0 END) / COUNT(DISTINCT ar.athlete_id)
+                    END, 2
+                ) AS medal_density,
+                ROUND(
+                    CASE
+                        WHEN SUM(CASE WHEN ar.medal IS NOT NULL THEN 1 ELSE 0 END) = 0 THEN 0
+                        ELSE COUNT(DISTINCT ar.athlete_id) / SUM(CASE WHEN ar.medal IS NOT NULL THEN 1 ELSE 0 END)
+                    END, 2
+                ) AS athlete_medal_ratio,
+                EXTRACT(YEAR FROM g.start_date) AS year
+            FROM 
+                Events e
+            LEFT JOIN 
+                Athlete_Results ar 
+            ON 
+                CASE 
+                    WHEN e.gender = 'none' THEN e.event_name || ', Mixed'
+                    ELSE e.event_name || ', ' || e.gender
+                END = ar.event_name 
+                AND e.sport_name = ar.sport_name 
+                AND e.edition_id = ar.edition_id
+            JOIN 
+                Olympic_Games g 
+            ON 
+                e.edition_id = g.edition_id
+            WHERE 
+                e.sport_name = :sport
+            GROUP BY 
+                e.event_name, e.sport_name, e.gender, g.start_date
+            ORDER BY 
+                e.event_name ASC, medal_density DESC
+        `;
+
+        const results = await connection.execute(query, [sport]);
+
+        const formattedResults = results.rows.map(([full_event_name, sport_name, total_participants, total_medals, medal_density, athlete_medal_ratio, year]) => ({
+            full_event_name,
+            sport_name,
+            total_participants,
+            total_medals,
+            medal_density,
+            athlete_medal_ratio,
+            year
+        }));
+        
+        res.json(formattedResults);
+
+    } catch (err) {
+        console.error("Error fetching events and medal data:", err);
+        res.status(500).send("Failed to fetch events and medal data");
+    } finally {
+        if (connection) {
+            await connection.close();
+        }
+    }
+});
+
 app.get("/api/overtimegraph", async (req, res) => {
     let connection;
     try {
@@ -247,7 +373,7 @@ app.get("/api/overtimegraph", async (req, res) => {
             FROM Athlete_Results
             GROUP BY edition_id
         ) ar ON g.edition_id = ar.edition_id
-        WHERE EXTRACT(YEAR FROM g.start_date) BETWEEN 1900 AND 2020
+        WHERE EXTRACT(YEAR FROM g.start_date) BETWEEN 1908 AND 2022
         GROUP BY EXTRACT(YEAR FROM g.start_date), mt.gold, mt.silver, mt.bronze, mt.total_medals, ar.total_athletes
         ORDER BY year ASC
         `;
@@ -278,6 +404,8 @@ app.get("/api/overtimegraph", async (req, res) => {
         }
     }
     });
+
+
 
 app.get("/api/countrytable", async (req, res) => {
     let connection;
@@ -367,10 +495,11 @@ app.get("/api/options", async (req, res) => {
 
         if (sport_selection) {
             const eventQuery = `
-        SELECT DISTINCT event_name
-        FROM Athlete_Results
-        WHERE sport_name = :sport_selection
-        ORDER BY event_name`;
+                SELECT DISTINCT event_name
+                FROM Athlete_Results
+                WHERE sport_name = :sport_selection
+                ORDER BY event_name
+                `;
             const eventResults = await connection.execute(eventQuery, [sport_selection]);
             events = eventResults.rows.map(row => row[0]);
         } else {
@@ -391,6 +520,7 @@ app.get("/api/options", async (req, res) => {
             sports,
             events,
         });
+
     } catch (err) {
         console.error("Error fetching dropdown options:", err);
         res.status(500).send("Failed to fetch dropdown options");
@@ -399,6 +529,68 @@ app.get("/api/options", async (req, res) => {
             await connection.close();
         }
     }
+});
+
+// API Endpoint: Get Data for Specific Country
+app.get("/api/country-data/:code", async (req, res) => {
+    const inputCode = req.params.code.toUpperCase();
+    const dbCode = Object.keys(nocmap).find((key) => nocmap[key] === inputCode) || inputCode;
+    const cacheKey = `country-data:${dbCode}`;
+
+    // Debug for Cache Key
+    //console.log("Generated Cache Key:", cacheKey);
+
+
+    let connection;
+    try {
+        //Check Redis cache
+        const cachedData = await client.get(cacheKey);
+        if (cachedData) {
+            // Debug for Cached data
+            //console.log(`Data retrieved from cache for ${cacheKey}`);
+            return res.json(JSON.parse(cachedData));
+        }
+        connection = await oracledb.getConnection(dbConfig);
+
+    // Query to get medal data for a specific country
+    const query = `
+             SELECT EXTRACT(YEAR FROM g.start_date) AS year,
+                SUM(NVL(mt.gold, 0)) AS gold,
+                SUM(NVL(mt.silver, 0)) AS silver,
+                SUM(NVL(mt.bronze, 0)) AS bronze,
+                SUM(NVL(mt.gold, 0) + NVL(mt.silver, 0) + NVL(mt.bronze, 0)) AS total
+            FROM Olympic_Games g
+            JOIN Medal_Tally mt ON g.edition_id = mt.edition_id
+            WHERE mt.country_noc = :dbCode
+            GROUP BY EXTRACT(YEAR FROM g.start_date)
+            ORDER BY year ASC
+        `;
+  
+    const binds = { dbCode };
+    const options = { outFormat: oracledb.OUT_FORMAT_OBJECT };
+       
+    const result = await connection.execute(query, binds, options);
+
+    if (result.rows.length === 0) {
+        return res.status(404).json({ message: "No data found for the specified country." });
+    }
+
+    // Cache data in Redis, cache with 300 seconds (5 minutes) expiration
+    await client.set(cacheKey, JSON.stringify(result.rows), { EX: 300 });
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error:", err.message);
+    res.status(500).json({ message: "Internal server error." });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error("Error closing database connection:", err.message);
+      }
+    }
+  }
 });
 
 app.post('/api/search', async (req, res) => {
