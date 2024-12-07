@@ -5,7 +5,7 @@ function Footer() {
     <footer style={{ textAlign: 'center', padding: '20px', backgroundColor: '#282c34', color: 'white', marginTop: '30px' }}>
       <p style={{ margin: 0 }}>
         <a
-          href="https://www.linkedin.com/me?trk=p_mwlite_feed-secondary_nav"
+          href="https://www.linkedin.com/in/olympic-data-app-62781b340"
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: 'white', textDecoration: 'none', margin: '0 10px' }}
