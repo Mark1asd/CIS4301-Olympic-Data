@@ -3,10 +3,6 @@
 // DB_USER=your_username 
 //DB_PASSWORD=your_password 
 //DB_CONNECT_STRING=oracle.cise.ufl.edu/orcl
-/*Example:
-DB_USER=yvoryk
-DB_PASSWORD=eTLkdmDdbp3l7La4bXXHIt31
-DB_CONNECT_STRING=oracle.cise.ufl.edu/orcl*/
 require('dotenv').config();
 
 const oracledb = require('oracledb');
