@@ -1,28 +1,37 @@
-import React, { useState } from 'react';
-
-// Mock data for the table
-const mockData = [
-  { rank: 1, country: 'USA', gold: 39, silver: 41, bronze: 33, total: 113 },
-  { rank: 2, country: 'China', gold: 38, silver: 32, bronze: 18, total: 88 },
-  { rank: 3, country: 'Japan', gold: 27, silver: 14, bronze: 17, total: 58 },
-  { rank: 4, country: 'UK', gold: 22, silver: 21, bronze: 22, total: 65 },
-  { rank: 5, country: 'ROC', gold: 20, silver: 28, bronze: 23, total: 71 },
-  { rank: 6, country: 'Australia', gold: 17, silver: 7, bronze: 22, total: 46 },
-  { rank: 7, country: 'India', gold: 7, silver: 10, bronze: 14, total: 31 },
-  { rank: 8, country: 'Germany', gold: 10, silver: 11, bronze: 16, total: 37 },
-  { rank: 9, country: 'France', gold: 10, silver: 12, bronze: 11, total: 33 },
-  { rank: 10, country: 'Italy', gold: 10, silver: 10, bronze: 20, total: 40 },
-  { rank: 11, country: 'Brazil', gold: 7, silver: 6, bronze: 8, total: 21 },
-  { rank: 12, country: 'Canada', gold: 6, silver: 8, bronze: 10, total: 24 },
-];
+import React, { useState, useEffect } from 'react';
 
 function Table() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [data, setData] = useState([]); // State for backend data
   const itemsPerPage = 10;
 
+  // Fetch data from the backend
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const response = await fetch('http://localhost:3001/api/countrytable'); // Replace with API endpoint
+        const result = await response.json();
+
+        const processedResult = result.map((item, index) => ({
+          code: item.code,
+          country: item.country,
+          rank: index + 1,
+          gold: item.gold || 0,
+          silver: item.silver || 0,
+          bronze: item.bronze || 0,
+          total: item.total || 0,
+        }));
+        setData(processedResult)
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+    fetchData();
+  }, []);
+
   // Filter data based on the search term
-  const filteredData = mockData.filter((item) =>
+  const filteredData = data.filter((item) =>
     item.country.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -34,7 +43,7 @@ function Table() {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
   return (
-    <div style={{ textAlign: 'center', margin: '20px 0', fontFamily: 'Arial, sans-serif' }}>
+    <div style={{ textAlign: 'center', margin: '20px 0', fontFamily: 'Arial, sans-serif', color: 'white' }}>
       {/* Search Bar */}
       <input
         type="text"
@@ -47,6 +56,8 @@ function Table() {
           marginBottom: '20px',
           border: '1px solid #ccc',
           borderRadius: '5px',
+          backgroundColor: '#444',
+          color: 'white',
         }}
       />
 
@@ -60,26 +71,34 @@ function Table() {
         }}
       >
         <thead>
-          <tr style={{ backgroundColor: '#f2f2f2' }}>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Rank</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Country</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Gold</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Silver</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Bronze</th>
-            <th style={{ border: '1px solid #ddd', padding: '8px' }}>Total</th>
+          <tr style={{ backgroundColor: '#444', color: 'white' }}>
+            <th style={{ border: '1px solid white', padding: '8px' }}>Rank</th>
+            <th style={{ border: '1px solid white', padding: '8px' }}>Country</th>
+            <th style={{ border: '1px solid white', padding: '8px' }}>Gold</th>
+            <th style={{ border: '1px solid white', padding: '8px' }}>Silver</th>
+            <th style={{ border: '1px solid white', padding: '8px' }}>Bronze</th>
+            <th style={{ border: '1px solid white', padding: '8px' }}>Total</th>
           </tr>
         </thead>
         <tbody>
-          {paginatedData.map((item) => (
-            <tr key={item.rank}>
-              <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{item.rank}</td>
-              <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{item.country}</td>
-              <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{item.gold}</td>
-              <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{item.silver}</td>
-              <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{item.bronze}</td>
-              <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{item.total}</td>
+          {paginatedData.length > 0 ? (
+            paginatedData.map((item) => (
+              <tr key={item.rank}>
+                <td style={{ border: '1px solid white', padding: '8px', textAlign: 'center', color: 'white' }}>{item.rank}</td>
+                <td style={{ border: '1px solid white', padding: '8px', textAlign: 'center', color: 'white' }}>{item.country}</td>
+                <td style={{ border: '1px solid white', padding: '8px', textAlign: 'center', color: 'white' }}>{item.gold}</td>
+                <td style={{ border: '1px solid white', padding: '8px', textAlign: 'center', color: 'white' }}>{item.silver}</td>
+                <td style={{ border: '1px solid white', padding: '8px', textAlign: 'center', color: 'white' }}>{item.bronze}</td>
+                <td style={{ border: '1px solid white', padding: '8px', textAlign: 'center', color: 'white' }}>{item.total}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="6" style={{ padding: '10px', textAlign: 'center', color: 'white' }}>
+                No data available
+              </td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
 
@@ -93,14 +112,14 @@ function Table() {
             marginRight: '10px',
             cursor: 'pointer',
             backgroundColor: currentPage === 1 ? '#ccc' : '#007BFF',
-            color: '#fff',
+            color: 'white',
             border: 'none',
             borderRadius: '5px',
           }}
         >
           Previous
         </button>
-        <span style={{ margin: '0 10px' }}>
+        <span style={{ margin: '0 10px', color: 'white' }}>
           Page {currentPage} of {totalPages}
         </span>
         <button
@@ -111,7 +130,7 @@ function Table() {
             marginLeft: '10px',
             cursor: 'pointer',
             backgroundColor: currentPage === totalPages ? '#ccc' : '#007BFF',
-            color: '#fff',
+            color: 'white',
             border: 'none',
             borderRadius: '5px',
           }}
