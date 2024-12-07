@@ -1,9 +1,29 @@
-
+// For Secrets - npm install dotenv
+// Create a .env file in the root directory and add the following:
+// DB_USER=your_username 
+//DB_PASSWORD=your_password 
+//DB_CONNECT_STRING=oracle.cise.ufl.edu/orcl
 require('dotenv').config();
 
 const oracledb = require('oracledb');
 const express = require('express');
 const cors = require('cors');
+
+// For Redis - npm install redis
+// If not installed on machine - brew install redis
+// To Start - redis-server in new terminal window
+const redis = require("redis");
+const client = redis.createClient();
+// Debug for Redis to let you know if it's working
+(async () => {
+    try {
+      await client.connect();
+      console.log("Redis client connected successfully");
+    } catch (err) {
+      console.error("Redis client connection error:", err);
+    }
+  })();
+
 
 const app = express();
 app.use(cors({ origin: ['http://localhost:3000'] }));
@@ -13,9 +33,9 @@ const PORT = 3001;
 
 // Change these as necessary before running
 const dbConfig = {
-    user: 'riley.willis',
-    password: 'aYdOoZGdbp3l7La4bXXHIt82',
-    connectString: 'oracle.cise.ufl.edu/orcl'
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    connectString: process.env.DB_CONNECT_STRING
 };
 
 // Giant list of country codes in our DB and those used by the frontend's map library paired up.
@@ -505,18 +525,30 @@ app.get("/api/options", async (req, res) => {
     }
 });
 
-// API Endpoint: Get Data for a Specific Country
+// API Endpoint: Get Data for Specific Country
 app.get("/api/country-data/:code", async (req, res) => {
-    const inputCode = req.params.code.toUpperCase(); // Frontend-provided code (ISO or NOC)
-    const dbCode = Object.keys(nocmap).find(key => nocmap[key] === inputCode) || inputCode; // Reverse mapping
+    const inputCode = req.params.code.toUpperCase();
+    const dbCode = Object.keys(nocmap).find((key) => nocmap[key] === inputCode) || inputCode;
+    const cacheKey = `country-data:${dbCode}`;
+
+    // Debug for Cache Key
+    //console.log("Generated Cache Key:", cacheKey);
+
 
     let connection;
-
     try {
+        //Check Redis cache
+        const cachedData = await client.get(cacheKey);
+        if (cachedData) {
+            // Debug for Cached data
+            //console.log(`Data retrieved from cache for ${cacheKey}`);
+            return res.json(JSON.parse(cachedData));
+        }
         connection = await oracledb.getConnection(dbConfig);
 
-        const query = `
-            SELECT EXTRACT(YEAR FROM g.start_date) AS year,
+    // Query to get medal data for a specific country
+    const query = `
+             SELECT EXTRACT(YEAR FROM g.start_date) AS year,
                 SUM(NVL(mt.gold, 0)) AS gold,
                 SUM(NVL(mt.silver, 0)) AS silver,
                 SUM(NVL(mt.bronze, 0)) AS bronze,
@@ -527,30 +559,32 @@ app.get("/api/country-data/:code", async (req, res) => {
             GROUP BY EXTRACT(YEAR FROM g.start_date)
             ORDER BY year ASC
         `;
+  
+    const binds = { dbCode };
+    const options = { outFormat: oracledb.OUT_FORMAT_OBJECT };
+       
+    const result = await connection.execute(query, binds, options);
 
-        const binds = { dbCode }; // Use the mapped NOC code
-        const options = { outFormat: oracledb.OUT_FORMAT_OBJECT };
-
-        const result = await connection.execute(query, binds, options);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: "No data found for the specified country." });
-        }
-
-        res.json(result.rows);
-
-    } catch (err) {
-        console.error(`Error fetching data for country ${dbCode}:`, err);
-        res.status(500).json({ message: "Internal server error." });
-    } finally {
-        if (connection) {
-            try {
-                await connection.close();
-            } catch (err) {
-                console.error("Error closing connection:", err);
-            }
-        }
+    if (result.rows.length === 0) {
+        return res.status(404).json({ message: "No data found for the specified country." });
     }
+
+    // Cache data in Redis, cache with 300 seconds (5 minutes) expiration
+    await client.set(cacheKey, JSON.stringify(result.rows), { EX: 300 });
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error:", err.message);
+    res.status(500).json({ message: "Internal server error." });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error("Error closing database connection:", err.message);
+      }
+    }
+  }
 });
 
 app.post('/api/search', async (req, res) => {
