@@ -4,7 +4,7 @@ import Footer from '../components/Footer';
 import WorldMap from '../components/WorldMap'; // Adjust the path if needed
 import Graph from '../components/Graph';
 import Table from '../components/Table';
-import ScheduleTable from '../components/ScheduleTable';
+import MedalDensityTable from '../components/MedalDensityTable';
 
 function DataAccess() {
   return (
@@ -15,14 +15,14 @@ function DataAccess() {
       </div>
       <div style={{ flex: 1, textAlign: 'center', padding: '20px' }}>
         <h2>Total Medals Earned Over Time</h2>
-        <p style={{ marginTop: '8px', padding: '8px', color: 'lightgray', fontSize: '16px' }}>
+        <p style={{ marginTop: '6px', padding: '6px', color: 'lightgray', fontSize: '16px' }}>
           Summer and Winter Olympics
         </p>
         <Graph />
         <h2>History by Country</h2>
         <Table />
-        <h2>Schedule of Events</h2>
-        <ScheduleTable />
+        <h2>Event Medal Data</h2>
+        <MedalDensityTable />
       </div>
       <Footer />
     </div>
