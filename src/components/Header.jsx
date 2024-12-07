@@ -12,6 +12,7 @@ function Header() {
     { path: '/', name: 'Home' },
     { path: '/data-access', name: 'Data Access' },
     { path: '/custom-search-tool', name: 'Custom Search Tool' },
+    {path: '/country-data', name: 'Country Data' }
   ];
 
   return (
@@ -34,6 +35,23 @@ function Header() {
             }}
           >
             Home
+          </NavLink>
+        )}
+
+        {(location.pathname.startsWith('/country-data/') || location.pathname === '/custom-search-tool') && (
+          <NavLink
+            to="/data-access"
+            style={{
+              textDecoration: 'none',
+              color: '#fff',
+              backgroundColor: 'grey',
+              padding: '5px 10px',
+              borderRadius: '5px',
+              fontWeight: 'bold',
+              marginRight: '20px',
+            }}
+          >
+          World Map & Charts
           </NavLink>
         )}
 

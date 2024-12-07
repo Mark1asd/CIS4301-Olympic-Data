@@ -27,15 +27,18 @@ function WorldMap() {
 
     // Cleanup the tooltip when the component unmounts
     return () => {
-      // Remove any tooltips or labels (if any exist)
       const tooltips = document.querySelectorAll('.jvectormap-tip');
-      tooltips.forEach(tooltip => tooltip.remove());
+      tooltips.forEach((tooltip) => tooltip.remove());
     };
   }, []);
 
   const handleRegionClick = (event, code) => {
-    // Navigate to the CountryData page with the country code
-    navigate(`/country-data/${code}`);
+    // Only navigate if the country has data
+    if (countryData[code]) {
+      navigate(`/country-data/${code}`);
+    } else {
+      console.warn(`No data available for country code: ${code}`);
+    }
   };
 
   const handleZoom = (direction) => {
@@ -66,7 +69,7 @@ function WorldMap() {
                 scale: ['#E2E2E2', '#FFD700'],
                 values: Object.fromEntries(
                   Object.entries(countryData).map(([code, { gold }]) => [code, gold || 0])
-                )
+                ),
               },
             ],
           }}

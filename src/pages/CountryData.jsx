@@ -141,14 +141,20 @@ function CountryData() {
     },
     hAxis: {
       textStyle: { color: "#FFFFFF" }, // White axis text
+      minValue: 0,
+      maxValue: globalMaxMedal, // Closest multiple of 50 to max medal count
     },
     vAxis: {
       textStyle: { color: "#FFFFFF" }, // White axis text
     },
   };
 
+  if (loading) {
+    return <h1>Loading data...</h1>;
+  }
 
   return (
+
     <div
       style={{
         display: "flex",
