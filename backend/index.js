@@ -36,9 +36,10 @@ const PORT = 3001;
 
 // Change these as necessary before running
 const dbConfig = {
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    connectString: process.env.DB_CONNECT_STRING
+    user: 'SYS',
+    password: 'admin1086',
+    connectString: '127.0.0.1:1521/FREE',
+    privilege: oracledb.SYSDBA
 };
 
 // Giant list of country codes in our DB and those used by the frontend's map library paired up.
@@ -483,9 +484,7 @@ app.get("/api/worldmap", async (req, res) => {
 
 // API Endpoint: Custom Search Tool 
 app.post('/api/search', async (req, res) => {
-    const { country, sport, athlete, event } = req.query;
-    // Limit the number of results returned, default to 10
-    const limit = parseInt(req.query.limit, 10) || 10;
+    const { country, sport, athlete, event, limit } = req.query;
 
     // Generate a unique cache key based on the search parameters
     const cacheKey = `search:${country || 'all'}:${sport || 'all'}:${athlete || 'all'}:${event || 'all'}:limit:${limit}`;
@@ -517,6 +516,14 @@ app.post('/api/search', async (req, res) => {
             AND (:sport IS NULL OR ar.sport_name = :sport)
             AND (:athlete IS NULL OR a.name = :athlete)
             AND (:event IS NULL OR ar.event_name = :event)
+        ORDER BY 
+            CASE 
+                WHEN ar.medal = 'Gold' THEN 1
+                WHEN ar.medal = 'Silver' THEN 2
+                WHEN ar.medal = 'Bronze' THEN 3
+                ELSE 4
+            END, 
+            LOWER(a.name) ASC
         FETCH FIRST :limit ROWS ONLY
         `;
 
@@ -525,7 +532,7 @@ app.post('/api/search', async (req, res) => {
             sport: sport || null,
             athlete: athlete || null,
             event: event || null,
-            limit,
+            limit: limit || 10, // default limit to 10
         };
 
         const results = await connection.execute(query, binds);

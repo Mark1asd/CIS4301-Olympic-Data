@@ -14,7 +14,7 @@ function CustomSearchTool() {
     sport: '',
     event: '',
   });
-
+  const [resultsLimit, setResultsLimit] = useState(10);
   const [results, setResults] = useState([]);
   const [dropdownOptions, setDropdownOptions] = useState({
     countries: [],
@@ -121,7 +121,10 @@ const fetchDynamicOptions = async (field, value) => {
 };
 
   const handleSearch = async () => {
-    const queryParam = new URLSearchParams(filters).toString();
+    const queryParam = new URLSearchParams({
+      ...filters,
+      limit: resultsLimit, // Include the limit in the query
+    }).toString();
     setLoading(true);
     try {
       const res = await fetch(`http://localhost:3001/api/search?${queryParam}`, { method: 'POST' });
@@ -229,7 +232,27 @@ const fetchDynamicOptions = async (field, value) => {
             ))}
           </select>
         </div>
-
+        <div>
+            <label style={{ display: 'block', marginBottom: '5px', color: 'white' }}>Results Limit</label>
+            <select
+              value={resultsLimit}
+              onChange={(e) => setResultsLimit(Number(e.target.value))}
+              style={{
+                padding: '10px',
+                borderRadius: '5px',
+                backgroundColor: '#444',
+                color: 'white',
+                border: '1px solid white',
+              }}
+            >
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+              <option value="100000">Show All</option>
+            </select>
+          </div>
         <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
           <button
             onClick={handleSearch}
